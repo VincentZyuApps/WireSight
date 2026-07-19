@@ -1,3 +1,5 @@
+# WireSight 英文设置文本 🌐
+# 左侧是程序读取的固定键名，右侧是设置界面显示给用户的文字。
 screen=WireSight
 option.WIREFRAME_SHADING=Directional Face Shades
 value.WIREFRAME_SHADING.0=Off

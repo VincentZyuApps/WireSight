@@ -22,7 +22,7 @@ VERSION="${1:-$(tr -d '[:space:]' < "${REPO_ROOT}/VERSION")}"
 VERSION="${VERSION#v}"
 
 if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-    printf 'error: invalid version %q; expected a SemVer-like value such as 0.1.0\n' "${VERSION}" >&2
+    printf 'error: invalid version %q; expected a SemVer-like value such as X.Y.Z\n' "${VERSION}" >&2
     exit 1
 fi
 

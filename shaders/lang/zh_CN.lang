@@ -1,3 +1,5 @@
+# WireSight 简体中文设置文本 🌐
+# 格式必须保持为“键=显示文字”，键名要与 settings.glsl 中的宏完全一致。
 screen=WireSight
 option.WIREFRAME_SHADING=方向面色阶
 value.WIREFRAME_SHADING.0=关闭

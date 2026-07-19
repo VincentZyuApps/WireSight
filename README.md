@@ -8,6 +8,10 @@ The pack targets the OptiFine shaderpack format shared by Iris, Oculus, and
 OptiFine. Its core path uses GLSL 1.20, a single terrain pass, normal depth
 writes, and no shadows or full-screen post-processing.
 
+## Preview
+
+![WireSight rendering a Minecraft world as green wireframe geometry](docs/images/preview/preview.png)
+
 ## Current scope
 
 - Visible 1x1 block boundaries on terrain and block entities
@@ -16,6 +20,7 @@ writes, and no shadows or full-screen post-processing.
 - Automatic distant-grid filtering to reduce shimmer
 - Alpha preservation for cutout geometry such as leaves and plants
 - Flat-color entities, particles, weather, and held items
+- Original colors and transparency for name tags and world-space text
 - Opaque stylized water and a black sky
 
 Only visible geometry can be outlined. WireSight is not an X-ray shader and does
@@ -43,7 +48,7 @@ Build locally with 7-Zip:
 
 ```bash
 ./scripts/build.sh
-./scripts/build.sh 0.2.0
+./scripts/build.sh X.Y.Z
 ```
 
 Archives and SHA-256 checksum files are written to `dist/`. The version defaults
@@ -63,5 +68,5 @@ manually, and pushing a `v*` tag publishes the matching release version.
 git commit --allow-empty -m "ci: test WireSight package (build action)"
 
 # Build and publish the version declared in VERSION.
-git commit -m "release: v0.1.0 initial shaderpack (build release)"
+git commit -m "release: vX.Y.Z summary (build release)"
 ```
