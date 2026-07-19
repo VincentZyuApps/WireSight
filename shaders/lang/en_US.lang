@@ -1,0 +1,7 @@
+screen=WireSight
+option.WIREFRAME_SHADING=Directional Face Shades
+value.WIREFRAME_SHADING.0=Off
+value.WIREFRAME_SHADING.1=On
+option.EDGE_WIDTH=Edge Width
+option.GRID_FADE_START=Grid Fade Start
+option.GRID_FADE_END=Grid Fade End

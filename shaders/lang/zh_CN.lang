@@ -1,0 +1,7 @@
+screen=WireSight
+option.WIREFRAME_SHADING=方向面色阶
+value.WIREFRAME_SHADING.0=关闭
+value.WIREFRAME_SHADING.1=开启
+option.EDGE_WIDTH=边线宽度
+option.GRID_FADE_START=网格淡出起点
+option.GRID_FADE_END=网格淡出终点

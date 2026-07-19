@@ -1,0 +1,171 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Build an artifact or publish a release
+        required: true
+        default: build
+        type: choice
+        options:
+          - build
+          - release
+      prerelease:
+        description: Mark a manually published release as a prerelease
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check commit message
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.flags.outputs.should_build }}
+      should_release: ${{ steps.flags.outputs.should_release }}
+      version: ${{ steps.flags.outputs.version }}
+      tag: ${{ steps.flags.outputs.tag }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Parse commit message
+        id: flags
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message || '' }}
+          MANUAL_MODE: ${{ inputs.mode || '' }}
+        run: |
+          version="$(tr -d '[:space:]' < VERSION)"
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid VERSION value: ${version}" >&2
+            exit 1
+          fi
+
+          tag="v${version}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "${tag}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION (${tag})." >&2
+            exit 1
+          fi
+
+          build=false
+          release=false
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            build=true
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            build=true
+            [[ "${MANUAL_MODE}" == "release" ]] && release=true
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            build=true
+            release=true
+          elif grep -qi 'build release' <<< "${COMMIT_MSG}"; then
+            build=true
+            release=true
+          elif grep -qi 'build action' <<< "${COMMIT_MSG}"; then
+            build=true
+          fi
+
+          {
+            echo "should_build=${build}"
+            echo "should_release=${release}"
+            echo "version=${version}"
+            echo "tag=${tag}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Version: ${tag}"
+          echo "Flags: build=${build} release=${release}"
+
+  build:
+    name: Build shaderpack
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Ensure 7-Zip is available
+        run: |
+          if ! command -v 7z >/dev/null 2>&1 && ! command -v 7zz >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y p7zip-full
+          fi
+
+      - name: Build shaderpack
+        id: build
+        run: ./scripts/build.sh '${{ needs.check.outputs.version }}'
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WireSight-${{ needs.check.outputs.version }}
+          path: |
+            ${{ steps.build.outputs.artifact_path }}
+            ${{ steps.build.outputs.checksum_path }}
+          if-no-files-found: error
+          compression-level: 0
+
+  release:
+    name: Publish GitHub release
+    needs:
+      - check
+      - build
+    if: needs.check.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WireSight-${{ needs.check.outputs.version }}
+          path: dist
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.check.outputs.tag }}
+          VERSION: ${{ needs.check.outputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_TAG} already exists; bump VERSION before publishing again." >&2
+            exit 1
+          fi
+
+          prerelease_args=()
+          if [[ "${PRERELEASE}" == "true" || "${VERSION}" == *-* ]]; then
+            prerelease_args+=(--prerelease)
+          fi
+
+          gh release create "${RELEASE_TAG}" \
+            "dist/WireSight-${VERSION}.zip" \
+            "dist/WireSight-${VERSION}.zip.sha256" \
+            --target "${GITHUB_SHA}" \
+            --title "WireSight ${RELEASE_TAG}" \
+            --generate-notes \
+            "${prerelease_args[@]}"

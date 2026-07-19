@@ -1,0 +1,13 @@
+# Local shader packs kept only for reference.
+/tmp/
+
+# Generated release archives.
+/dist/
+
+# Runtime and editor noise.
+*.log
+crash-reports/
+.idea/
+.vscode/
+*.swp
+*~
