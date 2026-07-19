@@ -1,3 +1,8 @@
+> **[📖 English](README.md)**
+> **[📖 简体中文(大陆)](README.zh-cn.md)**
+
+![WireSight](https://socialify.git.ci/VincentZyuApps/WireSight/image?custom_language=Shell&description=1&font=JetBrains+Mono&forks=1&issues=1&language=1&logo=https%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2Fthumb%2F6%2F6a%2FGLSL_Logo_%2528Unofficial%2529.svg%2F960px-GLSL_Logo_%2528Unofficial%2529.svg.png%3F_%3D20250822083621&name=1&owner=1&pulls=1&stargazers=1&theme=Auto)
+
 # WireSight
 
 WireSight is an experimental, low-overhead Minecraft Java shaderpack that renders
