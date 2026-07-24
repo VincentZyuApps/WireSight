@@ -5,13 +5,9 @@
 
 # WireSight
 
-WireSight is an experimental, low-overhead Minecraft Java shaderpack that renders
-the world like a solid modeling view: dark green faces with bright green block
-edges.
+WireSight is an experimental, low-overhead Minecraft Java shaderpack that renders the world like a solid modeling view: dark green faces with bright green block edges.
 
-The pack targets the OptiFine shaderpack format shared by Iris, Oculus, and
-OptiFine. Its core path uses GLSL 1.20, a single terrain pass, normal depth
-writes, and no shadows or full-screen post-processing.
+The pack targets the OptiFine shaderpack format shared by Iris, Oculus, and OptiFine. Its core path uses GLSL 1.20, a single terrain pass, normal depth writes, and no shadows or full-screen post-processing.
 
 ## Preview
 
@@ -89,8 +85,7 @@ The Amber preset intentionally keeps water cool and dark to distinguish it from 
 - Original colors and transparency for name tags and world-space text
 - Opaque stylized water and a configurable sky
 
-Only visible geometry can be outlined. WireSight is not an X-ray shader and does
-not render faces that Minecraft removes from chunk meshes.
+Only visible geometry can be outlined. WireSight is not an X-ray shader and does not render faces that Minecraft removes from chunk meshes.
 
 ## Compatibility target
 
@@ -99,44 +94,43 @@ not render faces that Minecraft removes from chunk meshes.
 - Oculus
 - OptiFine
 
-The first tested target is Minecraft 1.20.1 with Oculus 1.8.0 and Embeddium
-0.3.31. The shader intentionally avoids compute shaders, geometry shaders, and
-loader-specific extensions.
+Tested environments include Minecraft 1.20.1 with Oculus 1.8.0 and Embeddium 0.3.31, and Minecraft 1.21.8 with Iris 1.9.1 and Sodium 0.6.31. The shader intentionally avoids compute shaders, geometry shaders, and loader-specific extensions.
 
 ## Install
 
-Place the release zip in the Minecraft instance's `shaderpacks` directory, then
-select WireSight from the shader pack menu.
+Place the release zip in the Minecraft instance's `shaderpacks` directory, then select WireSight from the shader pack menu.
 
-## Build and release
+## Build, release, and publish
 
-Build locally with the 7-Zip CLI available in `PATH`:
+Build locally with [uv](https://docs.astral.sh/uv/) and Python 3.13:
 
 ```bash
-./scripts/build.sh
-./scripts/build.sh X.Y.Z
-python scripts/build.py
-python scripts/build.py X.Y.Z
+uv venv
+uv run python ./scripts/build_shaderpack.py
+uv run python ./scripts/validate_publish.py
 ```
 
-Archives and SHA-256 checksum files are written to `dist/`. The version defaults
-to the value in `VERSION`.
+Archives and SHA-256 checksum files are written to `dist/`. `metadata.toml` is the single source of truth for the WireSight version, supported Minecraft versions, platform project IDs, and loaders.
 
 GitHub Actions observes these exact commit-subject suffixes on pushes:
 
 - `(build action)`: build and upload a workflow artifact
-- `(build release)`: build and publish the version in `VERSION` from `main` or
-  `master`
+- `(build release)`: build and publish the version in `metadata.toml` from `main` or `master`
+- `(build publish)`: build, create the GitHub Release, and publish the ZIP to Modrinth and CurseForge
 
 Only the subject line is inspected; matching text in the commit body is ignored.
 
-Pull requests are always built. Builds and releases can also be started
-manually, and pushing a `v*` tag publishes the matching release version.
+Pull requests are always built. Builds, releases, and platform publishing can also be started manually; pushing a `v*` tag creates only the matching GitHub Release.
+
+See the [build, release, and publish guide](.github/workflows/build.md) for the pipeline diagrams, platform project setup, required GitHub Secrets, release metadata, supported Minecraft versions, and release-note format.
 
 ```bash
 # Build and upload an Actions artifact without creating a Release.
 git commit --allow-empty -m "ci: test WireSight package (build action)"
 
-# Build and publish the version declared in VERSION.
+# Build and publish the version declared in metadata.toml.
 git commit -m "release: vX.Y.Z summary (build release)"
+
+# Build, create a GitHub Release, and publish to Modrinth and CurseForge.
+git commit -m "release: vX.Y.Z summary (build publish)"
 ```

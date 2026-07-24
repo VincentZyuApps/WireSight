@@ -14,13 +14,14 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Build an artifact or publish a release
+        description: Build, release, or publish the shaderpack
         required: true
         default: build
         type: choice
         options:
           - build
           - release
+          - publish
       prerelease:
         description: Mark a manually published release as a prerelease
         required: false
@@ -36,48 +37,82 @@ concurrency:
 
 jobs:
   check:
-    name: Check commit message
+    name: Check trigger and metadata
     runs-on: ubuntu-latest
     outputs:
       should_build: ${{ steps.flags.outputs.should_build }}
       should_release: ${{ steps.flags.outputs.should_release }}
-      version: ${{ steps.flags.outputs.version }}
+      should_publish: ${{ steps.flags.outputs.should_publish }}
+      version: ${{ steps.metadata.outputs.version }}
       tag: ${{ steps.flags.outputs.tag }}
+      release_type: ${{ steps.flags.outputs.release_type }}
+      modrinth_project: ${{ steps.metadata.outputs.modrinth_project }}
+      modrinth_loaders: ${{ steps.metadata.outputs.modrinth_loaders }}
+      modrinth_game_versions: ${{ steps.metadata.outputs.modrinth_game_versions }}
+      curseforge_project: ${{ steps.metadata.outputs.curseforge_project }}
+      curseforge_game_versions: ${{ steps.metadata.outputs.curseforge_game_versions }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@v9.0.0
+        with:
+          version: "0.11.30"
+          python-version: "3.13"
+          enable-cache: false
+
+      - name: Create Python environment
+        run: uv venv
+
+      - name: Load release metadata
+        id: metadata
+        run: uv run python ./scripts/validate_publish.py --ci
 
       - name: Parse commit message
         id: flags
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message || '' }}
           MANUAL_MODE: ${{ inputs.mode || '' }}
+          MANUAL_PRERELEASE: ${{ inputs.prerelease || false }}
+          VERSION: ${{ steps.metadata.outputs.version }}
         run: |
-          version="$(tr -d '[:space:]' < VERSION)"
-          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid VERSION value: ${version}" >&2
-            exit 1
-          fi
-
-          tag="v${version}"
+          tag="v${VERSION}"
           if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "${tag}" ]]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match VERSION (${tag})." >&2
+            echo "Tag ${GITHUB_REF_NAME} does not match metadata.toml (${tag})." >&2
             exit 1
           fi
 
           build=false
           release=false
+          publish=false
           commit_subject="${COMMIT_MSG%%$'\n'*}"
+
+          release_type=release
+          if [[ "${VERSION}" == *-alpha* ]]; then
+            release_type=alpha
+          elif [[ "${VERSION}" == *-* ]]; then
+            release_type=beta
+          elif [[ "${MANUAL_PRERELEASE}" == "true" ]]; then
+            release_type=beta
+          fi
 
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
             build=true
           elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             build=true
-            [[ "${MANUAL_MODE}" == "release" ]] && release=true
+            if [[ "${MANUAL_MODE}" == "release" || "${MANUAL_MODE}" == "publish" ]]; then
+              release=true
+            fi
+            [[ "${MANUAL_MODE}" == "publish" ]] && publish=true
           elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             build=true
             release=true
+          elif grep -Eqi '\(build publish\)[[:space:]]*$' <<< "${commit_subject}"; then
+            build=true
+            release=true
+            publish=true
           elif grep -Eqi '\(build release\)[[:space:]]*$' <<< "${commit_subject}"; then
             build=true
             release=true
@@ -88,13 +123,23 @@ jobs:
           {
             echo "should_build=${build}"
             echo "should_release=${release}"
-            echo "version=${version}"
+            echo "should_publish=${publish}"
             echo "tag=${tag}"
+            echo "release_type=${release_type}"
           } >> "${GITHUB_OUTPUT}"
 
           echo "Version: ${tag}"
           echo "Commit subject: ${commit_subject}"
-          echo "Flags: build=${build} release=${release}"
+          echo "Release type: ${release_type}"
+          echo "Flags: build=${build} release=${release} publish=${publish}"
+
+      - name: Validate publishing configuration
+        if: steps.flags.outputs.should_publish == 'true'
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          REQUIRE_PLATFORM_VALIDATION: "true"
+        run: uv run python ./scripts/validate_publish.py --ci
 
   build:
     name: Build shaderpack
@@ -106,16 +151,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Ensure 7-Zip is available
-        run: |
-          if ! command -v 7z >/dev/null 2>&1 && ! command -v 7zz >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y p7zip-full
-          fi
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@v9.0.0
+        with:
+          version: "0.11.30"
+          python-version: "3.13"
+          enable-cache: false
+
+      - name: Create Python environment
+        run: uv venv
 
       - name: Build shaderpack
         id: build
-        run: ./scripts/build.sh '${{ needs.check.outputs.version }}'
+        run: uv run python ./scripts/build_shaderpack.py
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -140,6 +188,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
@@ -147,18 +197,75 @@ jobs:
           name: WireSight-${{ needs.check.outputs.version }}
           path: dist
 
+      - name: Check release does not exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_TAG} already exists; bump metadata.toml before publishing again." >&2
+            exit 1
+          fi
+
+      - name: Render release notes
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+          RELEASE_TAG: ${{ needs.check.outputs.tag }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          previous_tag="$(git tag --sort=-v:refname --merged "${GITHUB_SHA}" \
+            | grep -vx "${RELEASE_TAG}" | head -n 1 || true)"
+          commit_time="$(git show -s --format=%aI "${GITHUB_SHA}")"
+
+          if [[ -n "${previous_tag}" ]]; then
+            git log "${previous_tag}..${GITHUB_SHA}" \
+              --pretty=format:'- %s (`%h`) — @%an' --reverse > commit_log.md
+            full_changelog="[Full Changelog](https://github.com/${GITHUB_REPOSITORY}/compare/${previous_tag}...${RELEASE_TAG})"
+          else
+            git log "${GITHUB_SHA}" \
+              --pretty=format:'- %s (`%h`) — @%an' --reverse > commit_log.md
+            full_changelog=""
+          fi
+
+          if [[ ! -s commit_log.md ]]; then
+            echo '- No commit entries.' > commit_log.md
+          fi
+
+          export COMMIT_HASH="${GITHUB_SHA}"
+          export COMMIT_TIME="${commit_time}"
+          export FULL_CHANGELOG="${full_changelog}"
+
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          template = Path('.github/release_template.md').read_text(encoding='utf-8')
+          commit_log = Path('commit_log.md').read_text(encoding='utf-8').strip()
+          replacements = {
+              '__VERSION__': os.environ['VERSION'],
+              '__COMMIT_HASH__': os.environ['COMMIT_HASH'],
+              '__COMMIT_TIME__': os.environ['COMMIT_TIME'],
+              '__BRANCH__': os.environ['BRANCH'],
+              '__COMMIT_LOG__': commit_log,
+              '__FULL_CHANGELOG__': os.environ['FULL_CHANGELOG'],
+          }
+          for marker, value in replacements.items():
+              template = template.replace(marker, value)
+          Path('release_notes.md').write_text(template, encoding='utf-8')
+          PY
+
+          echo 'Release notes:'
+          cat release_notes.md
+
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.check.outputs.tag }}
           VERSION: ${{ needs.check.outputs.version }}
           PRERELEASE: ${{ inputs.prerelease }}
         run: |
-          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            echo "Release ${RELEASE_TAG} already exists; bump VERSION before publishing again." >&2
-            exit 1
-          fi
-
           prerelease_args=()
           if [[ "${PRERELEASE}" == "true" || "${VERSION}" == *-* ]]; then
             prerelease_args+=(--prerelease)
@@ -169,5 +276,89 @@ jobs:
             "dist/WireSight-${VERSION}.zip.sha256" \
             --target "${GITHUB_SHA}" \
             --title "WireSight ${RELEASE_TAG}" \
-            --generate-notes \
+            --notes-file release_notes.md \
             "${prerelease_args[@]}"
+
+  publish-modrinth:
+    name: Publish to Modrinth
+    needs:
+      - check
+      - build
+      - release
+    if: needs.check.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WireSight-${{ needs.check.outputs.version }}
+          path: dist
+
+      - name: Load GitHub release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          {
+            echo 'changelog<<EOF'
+            gh release view "${RELEASE_TAG}" --json body --jq .body
+            echo 'EOF'
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Publish shaderpack to Modrinth
+        uses: RubixDev/modrinth-upload@v1
+        with:
+          token: ${{ secrets.MODRINTH_TOKEN }}
+          project_id: ${{ needs.check.outputs.modrinth_project }}
+          file_path: dist/WireSight-${{ needs.check.outputs.version }}.zip
+          name: WireSight v${{ needs.check.outputs.version }}
+          version: ${{ needs.check.outputs.version }}
+          changelog: ${{ steps.notes.outputs.changelog }}
+          game_versions: ${{ needs.check.outputs.modrinth_game_versions }}
+          loaders: ${{ needs.check.outputs.modrinth_loaders }}
+          release_type: ${{ needs.check.outputs.release_type }}
+          featured: false
+
+  publish-curseforge:
+    name: Publish to CurseForge
+    needs:
+      - check
+      - build
+      - release
+    if: needs.check.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WireSight-${{ needs.check.outputs.version }}
+          path: dist
+
+      - name: Load GitHub release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          {
+            echo 'changelog<<EOF'
+            gh release view "${RELEASE_TAG}" --json body --jq .body
+            echo 'EOF'
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Publish shaderpack to CurseForge
+        uses: itsmeow/curseforge-upload@v3
+        with:
+          token: ${{ secrets.CURSEFORGE_TOKEN }}
+          project_id: ${{ needs.check.outputs.curseforge_project }}
+          game_endpoint: minecraft
+          file_path: dist/WireSight-${{ needs.check.outputs.version }}.zip
+          game_versions: ${{ needs.check.outputs.curseforge_game_versions }}
+          release_type: ${{ needs.check.outputs.release_type }}
+          changelog: ${{ steps.notes.outputs.changelog }}
+          changelog_type: markdown

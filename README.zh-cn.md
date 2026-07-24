@@ -5,13 +5,9 @@
 
 # WireSight
 
-WireSight 是一款实验性、低开销的 Minecraft Java 版光影包，它将整个世界
-渲染成类似实体建模视图的效果：方块表面呈深绿色，方块边线则呈明亮的
-绿色。
+WireSight 是一款实验性、低开销的 Minecraft Java 版光影包，它将整个世界渲染成类似实体建模视图的效果：方块表面呈深绿色，方块边线则呈明亮的绿色。
 
-本光影包面向 Iris、Oculus 与 OptiFine 共同支持的 OptiFine 光影包格式。
-其核心路径使用 GLSL 1.20、单次地形渲染、常规深度写入，并且不包含阴影
-或全屏后处理。
+本光影包面向 Iris、Oculus 与 OptiFine 共同支持的 OptiFine 光影包格式。其核心路径使用 GLSL 1.20、单次地形渲染、常规深度写入，并且不包含阴影或全屏后处理。
 
 ## 预览
 
@@ -89,8 +85,7 @@ WireSight 使用 Iris、Oculus 与 OptiFine 共同支持的 OptiFine ShaderPack 
 - 为名称标签和世界空间文字保留原始颜色与透明度
 - 使用不透明的风格化水体与可配置天空
 
-WireSight 只能勾勒可见的几何体。它不是透视光影，也不会渲染 Minecraft
-已从区块网格中剔除的表面。
+WireSight 只能勾勒可见的几何体。它不是透视光影，也不会渲染 Minecraft 已从区块网格中剔除的表面。
 
 ## 兼容性目标
 
@@ -99,44 +94,43 @@ WireSight 只能勾勒可见的几何体。它不是透视光影，也不会渲�
 - Oculus
 - OptiFine
 
-首个经过测试的目标环境为 Minecraft 1.20.1、Oculus 1.8.0 与 Embeddium
-0.3.31。本光影有意避免使用计算着色器、几何着色器以及加载器专属
-扩展。
+已测试的环境包括 Minecraft 1.20.1、Oculus 1.8.0 与 Embeddium 0.3.31，以及 Minecraft 1.21.8、Iris 1.9.1 与 Sodium 0.6.31。本光影有意避免使用计算着色器、几何着色器以及加载器专属扩展。
 
 ## 安装
 
-将发布的 zip 文件放入 Minecraft 实例的 `shaderpacks` 目录，然后在
-光影包菜单中选择 WireSight。
+将发布的 zip 文件放入 Minecraft 实例的 `shaderpacks` 目录，然后在光影包菜单中选择 WireSight。
 
-## 构建与发布
+## 构建、Release 与平台发布
 
-使用已经加入 `PATH` 的 7-Zip CLI 在本地构建：
+使用 [uv](https://docs.astral.sh/uv/) 与 Python 3.13 在本地构建：
 
 ```bash
-./scripts/build.sh
-./scripts/build.sh X.Y.Z
-python scripts/build.py
-python scripts/build.py X.Y.Z
+uv venv
+uv run python ./scripts/build_shaderpack.py
+uv run python ./scripts/validate_publish.py
 ```
 
-构建生成的压缩包与 SHA-256 校验文件会写入 `dist/`。默认版本号取自
-`VERSION` 文件中的值。
+构建生成的压缩包与 SHA-256 校验文件会写入 `dist/`。`metadata.toml` 是 WireSight 版本、支持的 Minecraft 版本、平台项目 ID 与加载器的唯一配置来源。
 
 GitHub Actions 会在推送时检查以下准确的提交标题后缀：
 
 - `(build action)`：构建并上传工作流产物
-- `(build release)`：构建并发布 `main` 或 `master` 分支中 `VERSION` 指定的
-  版本
+- `(build release)`：构建并发布 `main` 或 `master` 分支中 `metadata.toml` 指定的版本
+- `(build publish)`：构建、创建 GitHub Release，并将 ZIP 发布到 Modrinth 与 CurseForge
 
 工作流只检查标题行；提交正文中出现的相同文字会被忽略。
 
-Pull Request 始终会执行构建。构建和发布也可以手动启动，推送 `v*` 标签
-则会发布对应的版本。
+Pull Request 始终会执行构建。构建、Release 与平台发布也可以手动启动；推送 `v*` 标签只会创建对应的 GitHub Release。
+
+完整的流水线图、平台项目创建流程、GitHub Secrets、发布元数据、支持的 Minecraft 版本及发布说明格式，请参阅[构建、Release 与平台发布指南](.github/workflows/build.zh-cn.md)。
 
 ```bash
 # 构建并上传 Actions 产物，但不创建 Release。
 git commit --allow-empty -m "ci: test WireSight package (build action)"
 
-# 构建并发布 VERSION 中声明的版本。
+# 构建并发布 metadata.toml 中声明的版本。
 git commit -m "release: vX.Y.Z summary (build release)"
+
+# 构建、创建 GitHub Release，并发布到 Modrinth 与 CurseForge。
+git commit -m "release: vX.Y.Z summary (build publish)"
 ```

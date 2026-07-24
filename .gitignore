@@ -1,10 +1,14 @@
-# Local shader packs kept only for reference.
+# 🧱 仅用于本地参考的光影包。
 /tmp/
+/temp/
 
-# Generated release archives.
+# 📦 生成的发布压缩包。
 /dist/
+/.venv/
 
-# Runtime and editor noise.
+# 🧹 运行时与编辑器产生的杂项文件。
+__pycache__/
+*.py[cod]
 *.log
 crash-reports/
 .idea/
