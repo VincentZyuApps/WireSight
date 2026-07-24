@@ -68,6 +68,7 @@ jobs:
 
           build=false
           release=false
+          commit_subject="${COMMIT_MSG%%$'\n'*}"
 
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
             build=true
@@ -77,10 +78,10 @@ jobs:
           elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             build=true
             release=true
-          elif grep -qi 'build release' <<< "${COMMIT_MSG}"; then
+          elif grep -Eqi '\(build release\)[[:space:]]*$' <<< "${commit_subject}"; then
             build=true
             release=true
-          elif grep -qi 'build action' <<< "${COMMIT_MSG}"; then
+          elif grep -Eqi '\(build action\)[[:space:]]*$' <<< "${commit_subject}"; then
             build=true
           fi
 
@@ -92,6 +93,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
 
           echo "Version: ${tag}"
+          echo "Commit subject: ${commit_subject}"
           echo "Flags: build=${build} release=${release}"
 
   build:

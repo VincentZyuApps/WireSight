@@ -6,7 +6,7 @@
  * 这里没有把方块真的改画成 12 条 GL 线段，也没有使用几何着色器。
  * Minecraft 仍按原方式提交方块表面的三角形，所以深度测试、遮挡关系和固体渲染
  * 都可以继续工作。片元阶段只根据世界坐标判断当前像素离整数方块边界有多近，
- * 然后在深绿色面色与荧光绿边线色之间混合。这就是本项目的低成本线框方案。
+ * 然后在当前主题的面色与明亮边线色之间混合。这就是本项目的低成本线框方案。
  *
  * 同一个文件会被编译两次：入口定义 VERTEX_SHADER 时编译顶点部分，
  * 定义 FRAGMENT_SHADER 时编译片元部分。这样两阶段可以共享一份算法文件。
@@ -144,25 +144,25 @@ void main() {
     if (texture2D(texture, wsTexCoord).a < 0.10) discard;
 #endif
 
-    // 视距从 GRID_FADE_START 到 GRID_FADE_END 时平滑地把格线淡到 0。
-    // max 保证即使用户误把终点设得不大于起点，也至少保留 1 格过渡区间。
+    // 从 EDGE_FADE_START 开始，在 EDGE_FADE_LENGTH 格距离内把边线淡到 0。
+    // “起点 + 长度”始终能得到有效终点，不会出现终点早于起点的设置组合。
     float distanceFade = 1.0 - smoothstep(
-        GRID_FADE_START,
-        max(GRID_FADE_START + 1.0, GRID_FADE_END),
+        EDGE_FADE_START,
+        EDGE_FADE_START + EDGE_FADE_LENGTH,
         wsViewDistance
     );
     float grid = getGridCoverage(wsGridCoord) * distanceFade;
 
 #ifdef WATER_PASS
-    // 🌊 水和其他半透明地形使用偏青的面色，但仍作为不透明表面写入深度。
+    // 🌊 水和其他半透明地形使用当前主题的水体面色，但仍作为不透明表面写入深度。
     // 这是视觉上的建模视图，不是真正透视；可以避开透明混合带来的 overdraw。
     vec3 faceColor = WIRESIGHT_WATER_COLOR * wsFaceShade;
 #else
-    // 🟩 普通地形的基础深绿色乘以三档方向亮度。
+    // 普通地形的主题基础颜色乘以三档方向亮度。
     vec3 faceColor = WIRESIGHT_FACE_COLOR * wsFaceShade;
 #endif
 
-    // 🎨 最终混色：grid=0 输出纯 faceColor，grid=1 输出纯荧光边线色，
+    // 🎨 最终混色：grid=0 输出纯 faceColor，grid=1 输出当前主题的边线色，
     // 抗锯齿过渡区则输出两者之间的颜色。alpha 固定为 1，继续写入可靠深度。
     gl_FragData[0] = vec4(mix(faceColor, WIRESIGHT_EDGE_COLOR, grid), 1.0);
 }

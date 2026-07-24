@@ -1,9 +1,31 @@
 # WireSight 英文设置文本 🌐
 # 左侧是程序读取的固定键名，右侧是设置界面显示给用户的文字。
 screen=WireSight
-option.WIREFRAME_SHADING=Directional Face Shades
+screen.CUSTOM_COLORS=Custom Theme Colors
+option.THEME_PRESET=Theme Preset
+value.THEME_PRESET.0=WireSight Green
+value.THEME_PRESET.1=Cyan
+value.THEME_PRESET.2=Amber
+value.THEME_PRESET.3=Monochrome
+value.THEME_PRESET.4=Custom
+option.WIREFRAME_SHADING=Directional Face Shading
 value.WIREFRAME_SHADING.0=Off
 value.WIREFRAME_SHADING.1=On
 option.EDGE_WIDTH=Edge Width
-option.GRID_FADE_START=Grid Fade Start
-option.GRID_FADE_END=Grid Fade End
+option.EDGE_FADE_START=Edge Fade Start (blocks)
+option.EDGE_FADE_LENGTH=Edge Fade Length (blocks)
+option.CUSTOM_FACE_R=Block Face R
+option.CUSTOM_FACE_G=Block Face G
+option.CUSTOM_FACE_B=Block Face B
+option.CUSTOM_WATER_R=Water R
+option.CUSTOM_WATER_G=Water G
+option.CUSTOM_WATER_B=Water B
+option.CUSTOM_EDGE_R=Block Edge R
+option.CUSTOM_EDGE_G=Block Edge G
+option.CUSTOM_EDGE_B=Block Edge B
+option.CUSTOM_ENTITY_R=Entity R
+option.CUSTOM_ENTITY_G=Entity G
+option.CUSTOM_ENTITY_B=Entity B
+option.CUSTOM_SKY_R=Sky & Celestials R
+option.CUSTOM_SKY_G=Sky & Celestials G
+option.CUSTOM_SKY_B=Sky & Celestials B
