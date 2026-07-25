@@ -29,7 +29,7 @@ versions = [
 
 # Public platform identifiers belong in source control; tokens do not.
 [modrinth]
-project = "wiresight"
+project = "SChVy308"
 loaders = ["iris", "optifine"]
 
 [curseforge]

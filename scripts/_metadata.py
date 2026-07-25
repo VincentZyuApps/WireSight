@@ -16,7 +16,7 @@ SEMVER_PATTERN = re.compile(
     r"^[0-9]+\.[0-9]+\.[0-9]+(?:[.-][0-9A-Za-z.-]+)?$"
 )
 MINECRAFT_VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+(?:\.[0-9]+)?$")
-SAFE_IDENTIFIER_PATTERN = re.compile(r"^[0-9A-Za-z_-]+$")
+MODRINTH_PROJECT_ID_PATTERN = re.compile(r"^[0-9A-Za-z]{8}$")
 SAFE_LOADER_PATTERN = re.compile(r"^[0-9a-z_-]+$")
 
 
@@ -165,9 +165,9 @@ def load_metadata(path: Path) -> ReleaseMetadata:
     modrinth_project = modrinth.get("project")
     if (
         not isinstance(modrinth_project, str)
-        or SAFE_IDENTIFIER_PATTERN.fullmatch(modrinth_project) is None
+        or MODRINTH_PROJECT_ID_PATTERN.fullmatch(modrinth_project) is None
     ):
-        raise MetadataError("modrinth.project must be a project ID or slug")
+        raise MetadataError("modrinth.project must be an 8-character project ID")
     modrinth_loaders = _string_list(modrinth.get("loaders"), "modrinth.loaders")
     invalid_loaders = [
         loader

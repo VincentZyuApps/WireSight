@@ -212,6 +212,33 @@ def prompt_token(prompt: str) -> str:
         print("Token cannot be empty, please try again.", file=sys.stderr)
 
 
+def validate_modrinth_project(
+    metadata: ReleaseMetadata, project: dict[str, Any]
+) -> str | None:
+    project_id = str(project.get("id", "")).strip()
+    project_type = str(project.get("project_type", "")).strip()
+    status = str(project.get("status", "")).strip()
+    versions = project.get("versions")
+
+    if project_id != metadata.modrinth_project:
+        raise ApiError(
+            f"project ID is {project_id!r}; expected {metadata.modrinth_project!r}"
+        )
+    if not isinstance(versions, list):
+        raise ApiError("Modrinth project response is missing its versions list")
+    if project_type == "shader":
+        return None
+    if project_type == "project" and status == "draft" and not versions:
+        return (
+            "Modrinth reports a versionless draft placeholder; allowing the first "
+            "upload, which must finalize the project as type 'shader'."
+        )
+    raise ApiError(
+        f"project type is {project_type!r}, status is {status!r}, and it has "
+        f"{len(versions)} version(s); expected type 'shader'"
+    )
+
+
 def environment_tokens(required: bool) -> tuple[str, str] | None:
     modrinth_token = os.environ.get("MODRINTH_TOKEN", "").strip()
     curseforge_token = os.environ.get("CURSEFORGE_TOKEN", "").strip()
@@ -237,32 +264,25 @@ def validate_platforms(
     print("\n🔍 Querying Modrinth...")
     try:
         project = query_modrinth_project(metadata.modrinth_project, modrinth_token)
-        project_type = str(project.get("project_type", "")).strip()
-        if project_type != "shader":
-            raise ApiError(
-                f"project type is {project_type!r}; expected 'shader'"
-            )
+        project_warning = validate_modrinth_project(metadata, project)
         print(
             json.dumps(
                 {
                     "id": project.get("id"),
                     "slug": project.get("slug"),
                     "title": project.get("title"),
-                    "project_type": project_type,
+                    "project_type": project.get("project_type"),
                     "status": project.get("status"),
+                    "version_count": len(project["versions"]),
                 },
                 ensure_ascii=False,
                 indent=2,
             )
         )
+        if project_warning:
+            warnings.append(project_warning)
     except HttpApiError as error:
-        if error.status == 404:
-            warnings.append(
-                "Modrinth project metadata is hidden or the token lacks project "
-                f"read permission; retaining slug {metadata.modrinth_project!r}."
-            )
-        else:
-            errors.append(redact(f"Modrinth: {error}", secrets))
+        errors.append(redact(f"Modrinth: {error}", secrets))
     except Exception as error:
         errors.append(redact(f"Modrinth: {error}", secrets))
 

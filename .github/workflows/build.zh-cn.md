@@ -19,7 +19,7 @@ Pull Request 始终只构建而不发布。没有这些后缀的推送只会运�
 
 无需配置 Repository Variables。公开发布设置统一保存在 `metadata.toml` 中：
 
-- 🟢 `modrinth.project = "wiresight"` 用于选择 Modrinth 项目。
+- 🟢 `modrinth.project = "SChVy308"` 用于选择 Modrinth 内部 Project ID。
 - 🥽 `modrinth.loaders = ["iris", "optifine"]` 用于标记支持的光影加载器。
 - 🔥 `curseforge.project = 1623760` 用于选择 CurseForge 项目。
 - 🎮 `minecraft.versions` 包含全部 19 个受支持的 Minecraft 正式版本。
@@ -88,10 +88,16 @@ Actions 构建产物与 GitHub Release 均包含 `WireSight-X.Y.Z.zip` 及其 `.
 2. 📝 项目类型选择 `Shader`，填写 WireSight 名称、摘要、说明、MIT 许可证、源代码地址和问题反馈地址。
 3. 🎮 支持的加载器选择 Iris 与 OptiFine，并选择下文列出的 19 个 Minecraft 正式版本。
 4. 🥽 在说明中注明本光影通过通用 OptiFine ShaderPack 格式兼容 Oculus；Modrinth 目前没有独立的 Oculus loader 标签。
-5. ✅ 提交项目审核。`wiresight` slug 是 WireSight 使用的项目标识，并存储在 `metadata.toml` 中。
+5. ✅ 确认 `wiresight` 项目的内部 ID 为 `SChVy308`，并与 `metadata.toml` 保持一致。
 6. 🔐 打开 [Modrinth API Tokens](https://modrinth.com/settings/pats)，创建具有新建版本权限的 Token，并立即复制保存。
 
-⚠️ 运行 `(build publish)` 前，项目必须通过审核，并配置好 `MODRINTH_TOKEN`。验证器遇到 `404` 时只会警告，并回退使用 `wiresight` slug。
+`MODRINTH_TOKEN` 只需勾选以下两个作用域：
+
+- 👀 项目 → 读取项目（`PROJECT_READ`），供 `validate_publish.py` 查询并确认 WireSight 项目。
+- ⬆️ 版本 → 创建版本（`VERSION_CREATE`），供 GitHub Actions 上传文件并创建 Modrinth 版本。
+
+⚠️ `(build publish)` 要求 `MODRINTH_TOKEN` 能读取 Project ID `SChVy308`；遇到 `404` 会直接失败且不会回退使用 slug。
+🧪 无版本的 `project + draft` 占位状态仅允许首次上传；存在任何版本后，API 必须返回 `project_type = shader`。
 
 ## 🔥 创建 CurseForge 项目
 

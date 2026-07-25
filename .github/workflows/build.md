@@ -19,7 +19,7 @@ Pull requests always build without releasing. A push without one of these suffix
 
 No Repository variables are required. Public publishing settings live in `metadata.toml`:
 
-- 🟢 `modrinth.project = "wiresight"` selects the Modrinth project.
+- 🟢 `modrinth.project = "SChVy308"` selects the internal Modrinth Project ID.
 - 🥽 `modrinth.loaders = ["iris", "optifine"]` tags the supported shader loaders.
 - 🔥 `curseforge.project = 1623760` selects the CurseForge project.
 - 🎮 `minecraft.versions` contains all 19 supported stable Minecraft versions.
@@ -88,10 +88,16 @@ Release notes are rendered from `.github/release_template.md`. They contain the 
 2. 📝 Select the `Shader` project type, enter the WireSight name, summary, description, MIT license, source URL, and issue tracker URL.
 3. 🎮 Select Iris and OptiFine as the supported loaders and select the 19 stable Minecraft versions listed below.
 4. 🥽 State in the description that the pack also supports Oculus through the shared OptiFine ShaderPack format; Modrinth does not currently provide an Oculus loader tag.
-5. ✅ Submit the project for review. WireSight uses the `wiresight` slug stored in `metadata.toml`.
+5. ✅ Verify that the `wiresight` project's internal ID is `SChVy308`, as stored in `metadata.toml`.
 6. 🔐 Open [Modrinth API tokens](https://modrinth.com/settings/pats), create a token with permission to create versions, and copy it immediately.
 
-⚠️ Do not run `(build publish)` until the project is accepted and `MODRINTH_TOKEN` is configured. A validator `404` remains a warning and falls back to the `wiresight` slug.
+The `MODRINTH_TOKEN` needs only these two scopes:
+
+- 👀 Project → Read project (`PROJECT_READ`) lets `validate_publish.py` query and verify the WireSight project.
+- ⬆️ Version → Create version (`VERSION_CREATE`) lets GitHub Actions upload files and create Modrinth versions.
+
+⚠️ `(build publish)` requires `MODRINTH_TOKEN` to read Project ID `SChVy308`; a `404` is fatal and never falls back to a slug.
+🧪 A versionless `project + draft` placeholder is allowed only for the first upload; after any version exists, the API must report `project_type = shader`.
 
 ## 🔥 Create a CurseForge Project
 
