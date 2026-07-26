@@ -1,10 +1,10 @@
 * text=auto eol=lf
 
-*.md linguist-detectable=true
-*.toml linguist-detectable=true
-*.json linguist-detectable=true
-*.yml linguist-detectable=true
-*.yaml linguist-detectable=true
+*.md linguist-detectable=true -linguist-documentation -linguist-vendored -linguist-generated
+*.toml linguist-detectable=true -linguist-documentation -linguist-vendored -linguist-generated
+*.json linguist-detectable=true -linguist-documentation -linguist-vendored -linguist-generated
+*.yml linguist-detectable=true -linguist-documentation -linguist-vendored -linguist-generated
+*.yaml linguist-detectable=true -linguist-documentation -linguist-vendored -linguist-generated
 
 *.png binary
 *.zip binary
