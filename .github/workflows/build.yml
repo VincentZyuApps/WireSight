@@ -47,10 +47,15 @@ jobs:
       tag: ${{ steps.flags.outputs.tag }}
       release_type: ${{ steps.flags.outputs.release_type }}
       modrinth_project: ${{ steps.metadata.outputs.modrinth_project }}
-      modrinth_loaders: ${{ steps.metadata.outputs.modrinth_loaders }}
-      modrinth_game_versions: ${{ steps.metadata.outputs.modrinth_game_versions }}
       curseforge_project: ${{ steps.metadata.outputs.curseforge_project }}
-      curseforge_game_versions: ${{ steps.metadata.outputs.curseforge_game_versions }}
+      iris_oculus_artifact_name: ${{ steps.metadata.outputs.iris_oculus_artifact_name }}
+      iris_oculus_modrinth_loader: ${{ steps.metadata.outputs.iris_oculus_modrinth_loader }}
+      iris_oculus_modrinth_game_versions: ${{ steps.metadata.outputs.iris_oculus_modrinth_game_versions }}
+      iris_oculus_curseforge_game_versions: ${{ steps.metadata.outputs.iris_oculus_curseforge_game_versions }}
+      optifine_artifact_name: ${{ steps.metadata.outputs.optifine_artifact_name }}
+      optifine_modrinth_loader: ${{ steps.metadata.outputs.optifine_modrinth_loader }}
+      optifine_modrinth_game_versions: ${{ steps.metadata.outputs.optifine_modrinth_game_versions }}
+      optifine_curseforge_game_versions: ${{ steps.metadata.outputs.optifine_curseforge_game_versions }}
 
     steps:
       - name: Check out repository
@@ -170,8 +175,10 @@ jobs:
         with:
           name: WireSight-${{ needs.check.outputs.version }}
           path: |
-            ${{ steps.build.outputs.artifact_path }}
-            ${{ steps.build.outputs.checksum_path }}
+            ${{ steps.build.outputs.iris_oculus_artifact_path }}
+            ${{ steps.build.outputs.iris_oculus_checksum_path }}
+            ${{ steps.build.outputs.optifine_artifact_path }}
+            ${{ steps.build.outputs.optifine_checksum_path }}
           if-no-files-found: error
           compression-level: 0
 
@@ -265,6 +272,8 @@ jobs:
           RELEASE_TAG: ${{ needs.check.outputs.tag }}
           VERSION: ${{ needs.check.outputs.version }}
           PRERELEASE: ${{ inputs.prerelease }}
+          IRIS_OCULUS_ARTIFACT: ${{ needs.check.outputs.iris_oculus_artifact_name }}
+          OPTIFINE_ARTIFACT: ${{ needs.check.outputs.optifine_artifact_name }}
         run: |
           prerelease_args=()
           if [[ "${PRERELEASE}" == "true" || "${VERSION}" == *-* ]]; then
@@ -272,8 +281,10 @@ jobs:
           fi
 
           gh release create "${RELEASE_TAG}" \
-            "dist/WireSight-${VERSION}.zip" \
-            "dist/WireSight-${VERSION}.zip.sha256" \
+            "dist/${IRIS_OCULUS_ARTIFACT}" \
+            "dist/${IRIS_OCULUS_ARTIFACT}.sha256" \
+            "dist/${OPTIFINE_ARTIFACT}" \
+            "dist/${OPTIFINE_ARTIFACT}.sha256" \
             --target "${GITHUB_SHA}" \
             --title "WireSight ${RELEASE_TAG}" \
             --notes-file release_notes.md \
@@ -308,17 +319,31 @@ jobs:
             echo 'EOF'
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Publish shaderpack to Modrinth
+      - name: Publish Iris and Oculus shaderpack to Modrinth
         uses: RubixDev/modrinth-upload@v1
         with:
           token: ${{ secrets.MODRINTH_TOKEN }}
           project_id: ${{ needs.check.outputs.modrinth_project }}
-          file_path: dist/WireSight-${{ needs.check.outputs.version }}.zip
-          name: WireSight v${{ needs.check.outputs.version }}
-          version: ${{ needs.check.outputs.version }}
+          file_path: dist/${{ needs.check.outputs.iris_oculus_artifact_name }}
+          name: WireSight v${{ needs.check.outputs.version }} - Iris/Oculus
+          version: ${{ needs.check.outputs.version }}-iris-oculus
           changelog: ${{ steps.notes.outputs.changelog }}
-          game_versions: ${{ needs.check.outputs.modrinth_game_versions }}
-          loaders: ${{ needs.check.outputs.modrinth_loaders }}
+          game_versions: ${{ needs.check.outputs.iris_oculus_modrinth_game_versions }}
+          loaders: ${{ needs.check.outputs.iris_oculus_modrinth_loader }}
+          release_type: ${{ needs.check.outputs.release_type }}
+          featured: false
+
+      - name: Publish OptiFine shaderpack to Modrinth
+        uses: RubixDev/modrinth-upload@v1
+        with:
+          token: ${{ secrets.MODRINTH_TOKEN }}
+          project_id: ${{ needs.check.outputs.modrinth_project }}
+          file_path: dist/${{ needs.check.outputs.optifine_artifact_name }}
+          name: WireSight v${{ needs.check.outputs.version }} - OptiFine
+          version: ${{ needs.check.outputs.version }}-optifine
+          changelog: ${{ steps.notes.outputs.changelog }}
+          game_versions: ${{ needs.check.outputs.optifine_modrinth_game_versions }}
+          loaders: ${{ needs.check.outputs.optifine_modrinth_loader }}
           release_type: ${{ needs.check.outputs.release_type }}
           featured: false
 
@@ -351,14 +376,26 @@ jobs:
             echo 'EOF'
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Publish shaderpack to CurseForge
+      - name: Publish Iris and Oculus shaderpack to CurseForge
         uses: itsmeow/curseforge-upload@v3
         with:
           token: ${{ secrets.CURSEFORGE_TOKEN }}
           project_id: ${{ needs.check.outputs.curseforge_project }}
           game_endpoint: minecraft
-          file_path: dist/WireSight-${{ needs.check.outputs.version }}.zip
-          game_versions: ${{ needs.check.outputs.curseforge_game_versions }}
+          file_path: dist/${{ needs.check.outputs.iris_oculus_artifact_name }}
+          game_versions: ${{ needs.check.outputs.iris_oculus_curseforge_game_versions }}
+          release_type: ${{ needs.check.outputs.release_type }}
+          changelog: ${{ steps.notes.outputs.changelog }}
+          changelog_type: markdown
+
+      - name: Publish OptiFine shaderpack to CurseForge
+        uses: itsmeow/curseforge-upload@v3
+        with:
+          token: ${{ secrets.CURSEFORGE_TOKEN }}
+          project_id: ${{ needs.check.outputs.curseforge_project }}
+          game_endpoint: minecraft
+          file_path: dist/${{ needs.check.outputs.optifine_artifact_name }}
+          game_versions: ${{ needs.check.outputs.optifine_curseforge_game_versions }}
           release_type: ${{ needs.check.outputs.release_type }}
           changelog: ${{ steps.notes.outputs.changelog }}
           changelog_type: markdown

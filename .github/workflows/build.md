@@ -5,7 +5,7 @@
 
 ## 👀 Overview
 
-This workflow builds the WireSight shaderpack, creates GitHub Releases, and can publish the same ZIP to Modrinth and CurseForge. Push triggers inspect only the first line of the commit message and require an exact, case-insensitive suffix.
+This workflow builds two WireSight variants, creates GitHub Releases, and can publish both ZIPs to Modrinth and CurseForge. Push triggers inspect only the first line of the commit message and require an exact, case-insensitive suffix.
 
 | 📝 Commit subject suffix | 📦 Actions artifact | 🏷️ GitHub Release | 🟢 Modrinth | 🔥 CurseForge |
 |---|:---:|:---:|:---:|:---:|
@@ -19,10 +19,10 @@ Pull requests always build without releasing. A push without one of these suffix
 
 No Repository variables are required. Public publishing settings live in `metadata.toml`:
 
+- 🥽 `variants.iris-oculus` builds the source package for Iris and Oculus across 19 modern releases.
+- 🔭 `variants.optifine` builds the ASCII-safe package for every stable release from Minecraft 1.8 through 1.21.x.
 - 🟢 `modrinth.project = "SChVy308"` selects the internal Modrinth Project ID.
-- 🥽 `modrinth.loaders = ["iris", "optifine"]` tags the supported shader loaders.
 - 🔥 `curseforge.project = 1623760` selects the CurseForge project.
-- 🎮 `minecraft.versions` contains all 19 supported stable Minecraft versions.
 
 `(build publish)` validates this metadata and both Secrets before building or creating a GitHub Release. The public configuration remains reviewable in Git history.
 
@@ -37,13 +37,13 @@ No Repository variables are required. Public publishing settings live in `metada
         +-----------+-----------+
         |                       |
 ⏭️ no build requested   🏗️ build shaderpack
-    ✅ stop green       📦 ZIP + SHA-256 artifact
+    ✅ stop green       📦 2 ZIPs + 2 SHA-256 files
                                 |
                       🏷️ release requested?
                           |             |
                          no            yes
                      ✅ stop    🚀 GitHub Release
-                            📄 ZIP + SHA-256 + notes
+                         📄 2 ZIPs + 2 SHA-256 + notes
                                          |
                               🌐 publish requested?
                                    |             |
@@ -51,18 +51,18 @@ No Repository variables are required. Public publishing settings live in `metada
                               ✅ stop      +----+----+
                                             |         |
                                     🟢 Modrinth  🔥 CurseForge
-                                  Iris + OptiFine    Shader
+                                    2 variants    2 variants
 ```
 
 ```mermaid
 flowchart TB
-    C[🔍 Check trigger and metadata.toml] -->|🏗️ build| B[📦 Build ZIP and SHA-256]
+    C[🔍 Check trigger and metadata.toml] -->|🏗️ build| B[📦 Build 2 ZIPs and 2 SHA-256 files]
     C -->|⏭️ no build| S1[✅ Stop successfully]
     B --> A[⬆️ Upload Actions artifact]
-    A -->|🏷️ release| R[🚀 Create GitHub Release with ZIP and SHA-256]
+    A -->|🏷️ release| R[🚀 Create GitHub Release with both variants]
     A -->|🛠️ build only| S2[✅ Stop successfully]
-    R -->|🌐 publish| M[🟢 Publish to Modrinth]
-    R -->|🌐 publish| F[🔥 Publish to CurseForge]
+    R -->|🌐 publish| M[🟢 Publish 2 Modrinth versions]
+    R -->|🌐 publish| F[🔥 Publish 2 CurseForge files]
     R -->|🏁 release only| S3[✅ Stop successfully]
 ```
 
@@ -70,7 +70,7 @@ The Modrinth and CurseForge jobs run independently after the GitHub Release succ
 
 ## 🏷️ Version and Release Notes
 
-`metadata.toml` is the single source of truth for the artifact name, release tag, platform version number, supported Minecraft versions, loaders, and public project IDs. Before `(build release)` or `(build publish)`, change `[project].version` to a version that does not already have a GitHub Release.
+`metadata.toml` is the single source of truth for both artifact names, the release tag, platform version numbers, variant support ranges, loaders, and public project IDs. Before `(build release)` or `(build publish)`, change `[project].version` to a version that does not already have a GitHub Release.
 
 | 🔢 `metadata.toml` version | 🚦 Platform release type | 🧪 GitHub prerelease |
 |---|---|---|
@@ -78,7 +78,7 @@ The Modrinth and CurseForge jobs run independently after the GitHub Release succ
 | `0.3.0-beta.1` | 🧪 `beta` | ✅ |
 | `0.3.0-alpha.1` | 🧪 `alpha` | ✅ |
 
-The Actions artifact and GitHub Release contain `WireSight-X.Y.Z.zip` and its `.zip.sha256` file. Modrinth and CurseForge receive only the ZIP.
+The Actions artifact and GitHub Release contain `WireSight-X.Y.Z-iris-oculus.zip`, `WireSight-X.Y.Z-optifine.zip`, and both `.zip.sha256` files. Modrinth and CurseForge receive the two ZIPs as separate platform records.
 
 Release notes are rendered from `.github/release_template.md`. They contain the version, branch or tag, commit hash, commit time, commits since the previous tag, and a full changelog link. Existing Releases, including `v0.2.0`, are not rewritten.
 
@@ -86,7 +86,7 @@ Release notes are rendered from `.github/release_template.md`. They contain the 
 
 1. 🔑 Sign in to [Modrinth](https://modrinth.com) and open [Create a project](https://modrinth.com/create/project).
 2. 📝 Select the `Shader` project type, enter the WireSight name, summary, description, MIT license, source URL, and issue tracker URL.
-3. 🎮 Select Iris and OptiFine as the supported loaders and select the 19 stable Minecraft versions listed below.
+3. 🎮 Select Iris and OptiFine as the supported loaders and select the variant ranges listed below.
 4. 🥽 State in the description that the pack also supports Oculus through the shared OptiFine ShaderPack format; Modrinth does not currently provide an Oculus loader tag.
 5. ✅ Verify that the `wiresight` project's internal ID is `SChVy308`, as stored in `metadata.toml`.
 6. 🔐 Open [Modrinth API tokens](https://modrinth.com/settings/pats), create a token with permission to create versions, and copy it immediately.
@@ -108,7 +108,7 @@ The `MODRINTH_TOKEN` needs only these two scopes:
 5. 🔐 Open the [CurseForge API Tokens](https://authors.curseforge.com/#/settings/api-tokens) page, generate an upload token, and copy it immediately.
 6. 🔢 Run `uv run python ./scripts/validate_publish.py` and enter both API tokens when prompted. The read-only validator checks every CurseForge version and version type without uploading a file.
 
-The workflow sends namespaced values such as `Minecraft 1.20:1.20.1`; the CurseForge Action resolves the corresponding numeric IDs at publish time.
+The workflow sends namespaced values such as `Minecraft 1.20:1.20.1`; the CurseForge Action resolves numeric IDs and creates one file for each variant.
 
 ## ⚙️ Configure GitHub Actions
 
@@ -125,7 +125,7 @@ Open the `Secrets` tab and add these repository secrets:
 
 ## 🧱 Supported Minecraft Versions
 
-Both platform uploads target these 19 stable releases and exclude snapshots, pre-releases, and release candidates:
+The Iris/Oculus variant targets these 19 stable releases and excludes snapshots, pre-releases, and release candidates:
 
 ```text
 1.20, 1.20.1, 1.20.2, 1.20.3, 1.20.4, 1.20.5, 1.20.6,
@@ -133,7 +133,7 @@ Both platform uploads target these 19 stable releases and exclude snapshots, pre
 1.21.7, 1.21.8, 1.21.9, 1.21.10, 1.21.11
 ```
 
-Modrinth receives these names directly and uses the `iris` and `optifine` loader tags. CurseForge receives namespaced values from `metadata.toml` and resolves numeric IDs through its API.
+The OptiFine variant targets every stable release from `1.8` through `1.21.11`, including every patch release in those families. Modrinth receives each variant's names and loader separately; CurseForge receives namespaced values and resolves numeric IDs through its API.
 
 ## ⌨️ Usage
 

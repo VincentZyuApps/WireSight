@@ -17,7 +17,8 @@ SEMVER_PATTERN = re.compile(
 )
 MINECRAFT_VERSION_PATTERN = re.compile(r"^[0-9]+\.[0-9]+(?:\.[0-9]+)?$")
 MODRINTH_PROJECT_ID_PATTERN = re.compile(r"^[0-9A-Za-z]{8}$")
-SAFE_LOADER_PATTERN = re.compile(r"^[0-9a-z_-]+$")
+SAFE_NAME_PATTERN = re.compile(r"^[0-9a-z_-]+$")
+REQUIRED_VARIANTS = ("iris-oculus", "optifine")
 
 
 class MetadataError(ValueError):
@@ -25,11 +26,29 @@ class MetadataError(ValueError):
 
 
 @dataclass(frozen=True)
+class BuildVariant:
+    name: str
+    suffix: str
+    loader: str
+    minecraft_versions: tuple[str, ...]
+
+    def artifact_name(self, version: str) -> str:
+        return f"WireSight-{version}-{self.suffix}.zip"
+
+    @property
+    def output_prefix(self) -> str:
+        return self.name.replace("-", "_")
+
+    @property
+    def modrinth_game_versions(self) -> str:
+        return ",".join(self.minecraft_versions)
+
+
+@dataclass(frozen=True)
 class ReleaseMetadata:
     version: str
-    minecraft_versions: tuple[str, ...]
+    variants: tuple[BuildVariant, ...]
     modrinth_project: str
-    modrinth_loaders: tuple[str, ...]
     curseforge_project: int
     curseforge_version_types: dict[str, str]
 
@@ -38,31 +57,49 @@ class ReleaseMetadata:
         return f"v{self.version}"
 
     @property
-    def modrinth_game_versions(self) -> str:
-        return ",".join(self.minecraft_versions)
+    def minecraft_versions(self) -> tuple[str, ...]:
+        versions = {
+            version
+            for variant in self.variants
+            for version in variant.minecraft_versions
+        }
+        return tuple(sorted(versions, key=_numeric_version_key))
 
-    @property
-    def modrinth_loader_names(self) -> str:
-        return ",".join(self.modrinth_loaders)
+    def variant(self, name: str) -> BuildVariant:
+        for variant in self.variants:
+            if variant.name == name:
+                return variant
+        raise MetadataError(f"unknown build variant: {name}")
 
-    @property
-    def curseforge_game_versions(self) -> str:
+    def curseforge_game_versions(self, variant: BuildVariant) -> str:
         values = []
-        for version in self.minecraft_versions:
+        for version in variant.minecraft_versions:
             family = minecraft_version_family(version)
             values.append(f"{self.curseforge_version_types[family]}:{version}")
         return ",".join(values)
 
     def github_outputs(self) -> dict[str, str]:
-        return {
+        outputs = {
             "version": self.version,
             "tag": self.tag,
             "modrinth_project": self.modrinth_project,
-            "modrinth_loaders": self.modrinth_loader_names,
-            "modrinth_game_versions": self.modrinth_game_versions,
             "curseforge_project": str(self.curseforge_project),
-            "curseforge_game_versions": self.curseforge_game_versions,
         }
+        for variant in self.variants:
+            prefix = variant.output_prefix
+            outputs.update(
+                {
+                    f"{prefix}_artifact_name": variant.artifact_name(self.version),
+                    f"{prefix}_modrinth_loader": variant.loader,
+                    f"{prefix}_modrinth_game_versions": (
+                        variant.modrinth_game_versions
+                    ),
+                    f"{prefix}_curseforge_game_versions": (
+                        self.curseforge_game_versions(variant)
+                    ),
+                }
+            )
+        return outputs
 
 
 def minecraft_version_family(version: str) -> str:
@@ -99,6 +136,37 @@ def _numeric_version_key(version: str) -> tuple[int, ...]:
     return tuple(int(part) for part in version.split("."))
 
 
+def _load_variant(name: str, table: dict[str, Any]) -> BuildVariant:
+    context = f"variants.{name}"
+    _reject_unknown_keys(
+        table, {"suffix", "loader", "minecraft-versions"}, context
+    )
+    suffix = table.get("suffix")
+    loader = table.get("loader")
+    if not isinstance(suffix, str) or SAFE_NAME_PATTERN.fullmatch(suffix) is None:
+        raise MetadataError(f"{context}.suffix must be a safe lowercase name")
+    if not isinstance(loader, str) or SAFE_NAME_PATTERN.fullmatch(loader) is None:
+        raise MetadataError(f"{context}.loader must be a safe lowercase name")
+    versions = _string_list(
+        table.get("minecraft-versions"), f"{context}.minecraft-versions"
+    )
+    invalid_versions = [
+        value
+        for value in versions
+        if MINECRAFT_VERSION_PATTERN.fullmatch(value) is None
+    ]
+    if invalid_versions:
+        raise MetadataError(
+            f"invalid stable Minecraft versions in {context}: "
+            + ", ".join(invalid_versions)
+        )
+    if list(versions) != sorted(versions, key=_numeric_version_key):
+        raise MetadataError(
+            f"{context}.minecraft-versions must be in ascending numeric order"
+        )
+    return BuildVariant(name, suffix, loader, versions)
+
+
 def load_metadata(path: Path) -> ReleaseMetadata:
     try:
         text = path.read_text(encoding="utf-8")
@@ -125,19 +193,16 @@ def load_metadata(path: Path) -> ReleaseMetadata:
     if not isinstance(data, dict):
         raise MetadataError("metadata.toml must contain TOML tables")
     _reject_unknown_keys(
-        data, {"project", "minecraft", "modrinth", "curseforge"}, "top-level"
+        data, {"project", "variants", "modrinth", "curseforge"}, "top-level"
     )
 
     project = _expect_table(data, "project", "metadata")
-    minecraft = _expect_table(data, "minecraft", "metadata")
+    raw_variants = _expect_table(data, "variants", "metadata")
     modrinth = _expect_table(data, "modrinth", "metadata")
     curseforge = _expect_table(data, "curseforge", "metadata")
     _reject_unknown_keys(project, {"version"}, "project")
-    _reject_unknown_keys(minecraft, {"versions"}, "minecraft")
-    _reject_unknown_keys(modrinth, {"project", "loaders"}, "modrinth")
-    _reject_unknown_keys(
-        curseforge, {"project", "version-types"}, "curseforge"
-    )
+    _reject_unknown_keys(modrinth, {"project"}, "modrinth")
+    _reject_unknown_keys(curseforge, {"project", "version-types"}, "curseforge")
 
     version = project.get("version")
     if not isinstance(version, str) or not SEMVER_PATTERN.fullmatch(version):
@@ -145,22 +210,18 @@ def load_metadata(path: Path) -> ReleaseMetadata:
     if version != version_match.group(1):
         raise MetadataError("the parsed version does not match metadata.toml line 2")
 
-    minecraft_versions = _string_list(
-        minecraft.get("versions"), "minecraft.versions"
-    )
-    invalid_versions = [
-        value
-        for value in minecraft_versions
-        if MINECRAFT_VERSION_PATTERN.fullmatch(value) is None
-    ]
-    if invalid_versions:
+    if tuple(raw_variants) != REQUIRED_VARIANTS:
         raise MetadataError(
-            "invalid stable Minecraft versions: " + ", ".join(invalid_versions)
+            "variants must appear exactly in this order: "
+            + ", ".join(REQUIRED_VARIANTS)
         )
-    if list(minecraft_versions) != sorted(
-        minecraft_versions, key=_numeric_version_key
-    ):
-        raise MetadataError("minecraft.versions must be in ascending numeric order")
+    variants = tuple(
+        _load_variant(name, _expect_table(raw_variants, name, "variants"))
+        for name in REQUIRED_VARIANTS
+    )
+    suffixes = [variant.suffix for variant in variants]
+    if len(suffixes) != len(set(suffixes)):
+        raise MetadataError("variant suffixes must be unique")
 
     modrinth_project = modrinth.get("project")
     if (
@@ -168,14 +229,6 @@ def load_metadata(path: Path) -> ReleaseMetadata:
         or MODRINTH_PROJECT_ID_PATTERN.fullmatch(modrinth_project) is None
     ):
         raise MetadataError("modrinth.project must be an 8-character project ID")
-    modrinth_loaders = _string_list(modrinth.get("loaders"), "modrinth.loaders")
-    invalid_loaders = [
-        loader
-        for loader in modrinth_loaders
-        if SAFE_LOADER_PATTERN.fullmatch(loader) is None
-    ]
-    if invalid_loaders:
-        raise MetadataError("invalid Modrinth loaders: " + ", ".join(invalid_loaders))
 
     curseforge_project = curseforge.get("project")
     if (
@@ -201,8 +254,11 @@ def load_metadata(path: Path) -> ReleaseMetadata:
             raise MetadataError("invalid curseforge.version-types entry")
         version_types[family] = type_name
 
+    all_versions = {
+        version for variant in variants for version in variant.minecraft_versions
+    }
     required_families = {
-        minecraft_version_family(version) for version in minecraft_versions
+        minecraft_version_family(version) for version in all_versions
     }
     missing_families = sorted(required_families - set(version_types))
     extra_families = sorted(set(version_types) - required_families)
@@ -217,9 +273,8 @@ def load_metadata(path: Path) -> ReleaseMetadata:
 
     return ReleaseMetadata(
         version=version,
-        minecraft_versions=minecraft_versions,
+        variants=variants,
         modrinth_project=modrinth_project,
-        modrinth_loaders=modrinth_loaders,
         curseforge_project=curseforge_project,
         curseforge_version_types=version_types,
     )

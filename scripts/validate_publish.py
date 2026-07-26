@@ -333,10 +333,16 @@ def main() -> int:
         metadata = load_metadata(repo_root / "metadata.toml")
         print(
             f"✅ Metadata: WireSight {metadata.version}, "
-            f"{len(metadata.minecraft_versions)} Minecraft versions, "
+            f"{len(metadata.variants)} variants, "
+            f"{len(metadata.minecraft_versions)} unique Minecraft versions, "
             f"Modrinth {metadata.modrinth_project}, "
             f"CurseForge {metadata.curseforge_project}"
         )
+        for variant in metadata.variants:
+            print(
+                f"  - {variant.name}: {variant.loader}, "
+                f"{len(variant.minecraft_versions)} Minecraft versions"
+            )
 
         if args.ci:
             required = os.environ.get("REQUIRE_PLATFORM_VALIDATION", "").lower() in {

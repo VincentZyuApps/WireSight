@@ -7,6 +7,11 @@
 - Commit: `__COMMIT_HASH__`
 - Commit time: `__COMMIT_TIME__`
 
+### Build Variants
+
+- `iris-oculus`: source package for Iris and Oculus
+- `optifine`: ASCII-safe package for OptiFine
+
 ### Commit Log
 
 __COMMIT_LOG__
