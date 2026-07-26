@@ -110,7 +110,7 @@
 > | 🌈 Iris | `1.21.8` | `Iris 1.9.1` | `Sodium 0.6.31` |
 > | 🔭 OptiFine | `1.8.9` | `OptiFine HD U M5` | `Forge 11.15.1.2318` |
 
-📚 OptiFine 构建面向 Minecraft 1.8 至 1.21.x 的全部正式版本；未列出的组合基于兼容接口提供支持，尚未逐版本实测。
+📚 两个构建均面向 Minecraft 1.8 至 1.21.x 的全部正式版本；未列出的组合基于兼容接口提供支持，尚未逐版本实测。
 
 ## 📦 安装
 
@@ -138,7 +138,7 @@ uv run python ./scripts/validate_publish.py
 
 | 📦 变体 | 构建文件 | Modrinth loader | Minecraft 范围 |
 |---|---|:---:|---|
-| 🌈 Iris / Oculus | `WireSight-X.Y.Z-iris-oculus.zip` | `iris` | `1.20` 至 `1.21.x` |
+| 🌈 Iris / Oculus | `WireSight-X.Y.Z-iris-oculus.zip` | `iris` | `1.8` 至 `1.21.x` |
 | 🔭 OptiFine | `WireSight-X.Y.Z-optifine.zip` | `optifine` | `1.8` 至 `1.21.x` |
 
 ⚙️ GitHub Actions 会在推送时检查以下准确的提交标题后缀：

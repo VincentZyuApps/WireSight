@@ -19,7 +19,7 @@ Pull Request 始终只构建而不发布。没有这些后缀的推送只会运�
 
 无需配置 Repository Variables。公开发布设置统一保存在 `metadata.toml` 中：
 
-- 🥽 `variants.iris-oculus` 为 Iris 与 Oculus 构建保留源码的软件包，覆盖 19 个现代版本。
+- 🥽 `variants.iris-oculus` 为 Iris 与 Oculus 构建保留源码的软件包，覆盖全部 70 个正式版本。
 - 🔭 `variants.optifine` 为 Minecraft 1.8 至 1.21.x 的全部正式版本构建 ASCII 安全的软件包。
 - 🟢 `modrinth.project = "SChVy308"` 用于选择 Modrinth 内部 Project ID。
 - 🔥 `curseforge.project = 1623760` 用于选择 CurseForge 项目。
@@ -125,15 +125,15 @@ Actions 构建产物与 GitHub Release 均包含 `WireSight-X.Y.Z-iris-oculus.zi
 
 ## 🧱 支持的 Minecraft 版本
 
-Iris/Oculus 变体面向以下 19 个正式版本，不包含 snapshot、pre-release 或 release candidate：
+两个变体均面向 Minecraft 1.8 至 1.21.11 的全部 70 个正式版本，不包含 snapshot、pre-release 或 release candidate：
 
 ```text
-1.20, 1.20.1, 1.20.2, 1.20.3, 1.20.4, 1.20.5, 1.20.6,
-1.21, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6,
-1.21.7, 1.21.8, 1.21.9, 1.21.10, 1.21.11
+1.8.x · 1.9.x · 1.10.x · 1.11.x · 1.12.x · 1.13.x · 1.14.x
+1.15.x · 1.16.x · 1.17.x · 1.18.x · 1.19.x
+1.20.x · 1.21.x
 ```
 
-OptiFine 变体面向 `1.8` 至 `1.21.11` 的全部正式版本，包含这些版本族中的所有补丁版本。Modrinth 分别接收每个变体的版本名与 loader；CurseForge 接收命名空间值并通过 API 解析数字 ID。
+加载器的可用性会随 Minecraft 版本变化。Modrinth 分别接收每个变体的版本名与 loader；CurseForge 接收命名空间值并通过 API 解析数字 ID。
 
 ## ⌨️ 用法
 

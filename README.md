@@ -110,7 +110,7 @@
 > | 🌈 Iris | `1.21.8` | `Iris 1.9.1` | `Sodium 0.6.31` |
 > | 🔭 OptiFine | `1.8.9` | `OptiFine HD U M5` | `Forge 11.15.1.2318` |
 
-📚 The OptiFine build targets every stable Minecraft release from 1.8 through 1.21.x. Unlisted combinations rely on compatible interfaces and have not been tested individually.
+📚 Both builds target every stable Minecraft release from 1.8 through 1.21.x. Unlisted combinations rely on compatible interfaces and have not been tested individually.
 
 ## 📦 Install
 
@@ -138,7 +138,7 @@ uv run python ./scripts/validate_publish.py
 
 | 📦 Variant | Artifact | Modrinth loader | Minecraft range |
 |---|---|:---:|---|
-| 🌈 Iris / Oculus | `WireSight-X.Y.Z-iris-oculus.zip` | `iris` | `1.20` through `1.21.x` |
+| 🌈 Iris / Oculus | `WireSight-X.Y.Z-iris-oculus.zip` | `iris` | `1.8` through `1.21.x` |
 | 🔭 OptiFine | `WireSight-X.Y.Z-optifine.zip` | `optifine` | `1.8` through `1.21.x` |
 
 ⚙️ GitHub Actions observes these exact commit-subject suffixes on pushes:

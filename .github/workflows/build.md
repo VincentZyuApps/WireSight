@@ -19,7 +19,7 @@ Pull requests always build without releasing. A push without one of these suffix
 
 No Repository variables are required. Public publishing settings live in `metadata.toml`:
 
-- 🥽 `variants.iris-oculus` builds the source package for Iris and Oculus across 19 modern releases.
+- 🥽 `variants.iris-oculus` builds the source package for Iris and Oculus across all 70 stable releases.
 - 🔭 `variants.optifine` builds the ASCII-safe package for every stable release from Minecraft 1.8 through 1.21.x.
 - 🟢 `modrinth.project = "SChVy308"` selects the internal Modrinth Project ID.
 - 🔥 `curseforge.project = 1623760` selects the CurseForge project.
@@ -125,15 +125,15 @@ Open the `Secrets` tab and add these repository secrets:
 
 ## 🧱 Supported Minecraft Versions
 
-The Iris/Oculus variant targets these 19 stable releases and excludes snapshots, pre-releases, and release candidates:
+Both variants target all 70 stable releases from Minecraft 1.8 through 1.21.11 and exclude snapshots, pre-releases, and release candidates:
 
 ```text
-1.20, 1.20.1, 1.20.2, 1.20.3, 1.20.4, 1.20.5, 1.20.6,
-1.21, 1.21.1, 1.21.2, 1.21.3, 1.21.4, 1.21.5, 1.21.6,
-1.21.7, 1.21.8, 1.21.9, 1.21.10, 1.21.11
+1.8.x · 1.9.x · 1.10.x · 1.11.x · 1.12.x · 1.13.x · 1.14.x
+1.15.x · 1.16.x · 1.17.x · 1.18.x · 1.19.x
+1.20.x · 1.21.x
 ```
 
-The OptiFine variant targets every stable release from `1.8` through `1.21.11`, including every patch release in those families. Modrinth receives each variant's names and loader separately; CurseForge receives namespaced values and resolves numeric IDs through its API.
+Loader availability varies by Minecraft version. Modrinth receives each variant's names and loader separately; CurseForge receives namespaced values and resolves numeric IDs through its API.
 
 ## ⌨️ Usage
 
